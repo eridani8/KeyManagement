@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using KeyManagement;
 using KeyManagement.Components;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -46,7 +47,12 @@ try
         });
     builder.Services.AddAuthorization();
     builder.Services.AddCascadingAuthenticationState();
-    
+
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+    {
+        builder.Host.UseWindowsService();
+    }
+
     var app = builder.Build();
 
     if (!app.Environment.IsDevelopment())
