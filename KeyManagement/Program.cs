@@ -58,7 +58,7 @@ try
     app.UseSwagger();
     app.UseSwaggerUI();
     app.MapControllers();
-    app.UseHttpsRedirection();
+    // app.UseHttpsRedirection();
     app.UseAntiforgery();
     app.UseAuthentication();
     app.UseAuthorization();
