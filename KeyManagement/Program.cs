@@ -31,6 +31,11 @@ try
     
     builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
+    builder.WebHost.ConfigureKestrel(o =>
+    {
+        o.ListenAnyIP(6739);
+    }).UseUrls();
+    
     builder.Host.UseSerilog(Log.Logger);
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
