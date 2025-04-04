@@ -1,0 +1,140 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Serilog
+@attribute [Authorize(Roles = "admin")]
+@rendermode InteractiveServer
+@inject LiteContext LiteContext
+
+<PageTitle>Управление ключами</PageTitle>
+
+@if (KeysCollection == null)
+{
+    <p>
+        <em>Загрузка...</em>
+    </p>
+}
+else if (KeysCollection.Count <= 0)
+{
+    <p>
+        <em>Ключей пока что нет</em>
+    </p>
+}
+else
+{
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Ключ</th>
+            <th>Логин</th>
+            <th>Истекает</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var key in KeysCollection)
+        {
+            <tr>
+                <td>@key.Key</td>
+                <td>@key.Login</td>
+                <td>@key.Expires.ToString("dd.MM.yyyy HH:mm:ss")</td>
+                <td>
+                    <button type="button" class="btn btn-primary" @onclick="@(async () => await RemoveKey(key))">
+                        Удалить
+                    </button>
+                    <button class="btn btn-secondary me-2" @onclick="() => OpenEditModal(key)">
+                        Редактировать
+                    </button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+@if (IsEditModalVisible && EditingKey != null)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Редактирование ключа</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Истекает</label>
+                        <input type="datetime-local" class="form-control"
+                               @bind-value="EditingKey.Expires"
+                               @bind-value:event="oninput" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Отмена</button>
+                    <button class="btn btn-primary" @onclick="SaveChanges">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop show"></div>
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private List<UserKey>? KeysCollection { get; set; }
+    
+    private bool IsEditModalVisible = false;
+    private UserKey? EditingKey = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationStateTask == null) return;
+        var state = await AuthenticationStateTask;
+        var username = state.User.Identity?.Name;
+        if (string.IsNullOrEmpty(username)) return;
+        KeysCollection = LiteContext.Keys.FindAll().ToList();
+    }
+
+    private Task RemoveKey(UserKey key)
+    {
+        try
+        {
+            LiteContext.Keys.Delete(key.Id);
+            KeysCollection?.Remove(key);
+            _ = InvokeAsync(StateHasChanged);
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, "Ошибка удаления ключа: {key}", key.Key);
+        }
+        return Task.CompletedTask;
+    }
+    
+    private void OpenEditModal(UserKey key)
+    {
+        EditingKey = new UserKey
+        {
+            Id = key.Id,
+            Key = key.Key,
+            Login = key.Login,
+            Expires = key.Expires
+        };
+        IsEditModalVisible = true;
+    }
+    
+    private void SaveChanges()
+    {
+        if (EditingKey != null)
+        {
+            LiteContext.Keys.Update(EditingKey);
+            KeysCollection = LiteContext.Keys.FindAll().ToList();
+        }
+        IsEditModalVisible = false;
+    }
+    
+    private void CloseModal()
+    {
+        IsEditModalVisible = false;
+        EditingKey = null;
+    }
+}

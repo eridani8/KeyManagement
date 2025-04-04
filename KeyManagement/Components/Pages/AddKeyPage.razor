@@ -1,0 +1,104 @@
+﻿@page "/AddKeyPage"
+@using System.Security.Claims
+@using KeyManagement.ViewModels
+@using LiteDB
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [Authorize(Roles = "admin")]
+@rendermode InteractiveServer
+@inject LiteContext LiteContext
+
+<h3>Новый ключ</h3>
+
+<div style="width:500px;">
+    <EditForm Model="@Model" OnValidSubmit="Create" FormName="CreateOrder" class="p-5">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <InputText @bind-Value="Model.Login" class="form-control" placeholder="Логин" />
+            <ValidationMessage For="() => Model.Login" />
+        </div>
+
+        <div class="mb-3">
+            <InputNumber @bind-Value="Model.Expires" class="form-control" placeholder="Срок годности (дней)" />
+            <ValidationMessage For="() => Model.Expires" />
+        </div>
+
+        <div class="mb-3">
+            <input type="text" class="form-control" value="@Model.Key" readonly />
+        </div>
+
+        <div class="mb-3">
+            <button type="button" class="btn btn-secondary" @onclick="GenerateGuid">
+                Сгенерировать
+            </button>
+        </div>
+
+        <div class="mb-3 text-center">
+            <span class="text-danger">@ErrorMessage</span>
+        </div>
+
+        <div class="mb-3 d-grid gap-2">
+            <button type="submit" class="btn btn-primary">Создать ключ</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+    
+    [SupplyParameterFromForm] public CreateKeyViewModel Model { get; set; } = new();
+    
+    private string? ErrorMessage { get; set; }
+    
+    ClaimsPrincipal? User { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationStateTask == null) return;
+        var state = await AuthenticationStateTask;
+        User = state.User;
+    }
+
+    private Task Create()
+    {
+        if (User?.Identity?.IsAuthenticated != true)
+        {
+            ErrorMessage = "Нет доступа";
+            return Task.CompletedTask;
+        }
+
+        var keys = LiteContext.Keys.FindAll().ToList();
+
+        if (keys.FirstOrDefault(k => k.Login == Model.Login) is { } currentKey)
+        {
+            ErrorMessage = $"У данного пользователя уже есть ключ: {currentKey.Key.ToString()}";
+            return Task.CompletedTask;
+        }
+
+        if (keys.Any(k => k.Key == Model.Key))
+        {
+            ErrorMessage = "Данный ключ уже используется, сгенерируйте снова";
+            return Task.CompletedTask;
+        }
+
+        var key = new UserKey()
+        {
+            Id = ObjectId.NewObjectId(),
+            Login = Model.Login!,
+            Key = Model.Key,
+            Expires = DateTime.Now.AddDays(Model.Expires)
+        };
+
+        LiteContext.Keys.Insert(key);
+
+        Model = new CreateKeyViewModel();
+        return Task.CompletedTask;
+    }
+    
+    private void GenerateGuid()
+    {
+        Model.Key = Guid.NewGuid();
+    }
+}

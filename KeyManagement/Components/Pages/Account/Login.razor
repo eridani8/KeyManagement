@@ -1,0 +1,76 @@
+﻿@page "/login"
+
+@using System.Security.Claims
+@using KeyManagement.ViewModels
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@inject NavigationManager NavigationManager
+@inject LiteContext LiteContext
+
+<div>
+    <div class="col-lg-4 offset-lg-4 pt-4 pb-4 border">
+        <EditForm Model="@Model" OnValidSubmit="Authenticate" FormName="LoginForm" class="p-5">
+            <DataAnnotationsValidator/>
+            <div class="mb-3 text-center flex-column">
+                <h3>Авторизация</h3>
+            </div>
+            <div class="mb-3">
+                <label>Логин</label>
+                <InputText @bind-Value="Model.Username" class="form-control"></InputText>
+                <ValidationMessage For="() => Model.Username"/>
+            </div>
+            <div class="mb-3">
+                <label>Пароль</label>
+                <InputText @bind-Value="Model.Password" class="form-control"
+                           type="password"></InputText>
+                <ValidationMessage For="() => Model.Password"/>
+            </div>
+            <div class="mb-3 text-center">
+                <span class="text-danger">@ErrorMessage</span>
+            </div>
+            <div class="mb-3 d-grid gap-2">
+                <button type="submit" class="btn btn-primary">Войти</button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] public required HttpContext HttpContext { get; set; }
+
+    [SupplyParameterFromForm] public LoginViewModel Model { get; set; } = new();
+
+    private string? ErrorMessage { get; set; }
+
+    private async Task Authenticate()
+    {
+        if (string.IsNullOrEmpty(Model.Username) || string.IsNullOrEmpty(Model.Password))
+        {
+            return;
+        }
+
+        var account = LiteContext.Users.FindOne(u => u.Username == Model.Username);
+        if (account == null)
+        {
+            ErrorMessage = "Учетная запись не найдена";
+            return;
+        }
+
+        if (!account.Password.Equals(Model.Password, StringComparison.Ordinal))
+        {
+            ErrorMessage = "Неправильный пароль";
+            return;
+        }
+
+        var claims = new List<Claim>()
+        {
+            new(ClaimTypes.Name, Model.Username),
+            new(ClaimTypes.Role, account.Role)
+        };
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+        await HttpContext.SignInAsync(principal);
+        NavigationManager.NavigateTo("/");
+    }
+
+}
