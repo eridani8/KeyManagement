@@ -16,17 +16,15 @@ public class CheckController(LiteContext context) : ControllerBase
             var keys = context.Keys.FindAll().ToList();
             var findKey = keys.FirstOrDefault(k => k.Key.ToString() == keyDto.Key);
             if (findKey is null) return Task.FromResult<ActionResult>(NotFound());
-            if (findKey.Expires <= DateTime.Now)
-            {
-                context.Keys.Delete(findKey.Id);
-                return Task.FromResult<ActionResult>(NotFound());
-            }
 
+            findKey.RequestsCount++;
+            context.Keys.Update(findKey);
+            
             return Task.FromResult<ActionResult>(Ok());
         }
         catch (Exception e)
         {
-            Log.ForContext<CheckController>().Error(e, "Ошибка проверки ключа: {key}", keyDto.Key);
+            Log.ForContext<CheckController>().Error(e, "Ошибка проверки ключа: {key}", keyDto?.Key);
             return Task.FromResult<ActionResult>(StatusCode(500));
         }
     }

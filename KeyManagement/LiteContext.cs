@@ -6,14 +6,14 @@ public class LiteContext
 {
     public ILiteCollection<User> Users { get; }
     public ILiteCollection<UserKey> Keys { get; }
-    
+    public ILiteDatabase Db { get; }
     public LiteContext()
     {
         var path = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data.db"));
         
-        var db = new LiteDatabase(path);
-        Users = db.GetCollection<User>("users");
-        Keys = db.GetCollection<UserKey>("keys");
+        Db = new LiteDatabase(path);
+        Users = Db.GetCollection<User>("users");
+        Keys = Db.GetCollection<UserKey>("keys");
         
         var users = Users.FindAll().ToList();
         if (users.All(u => u.Username != "root"))
@@ -42,5 +42,6 @@ public class UserKey
     public required ObjectId Id { get; init; }
     public required string Login { get; set; }
     public required Guid Key { get; init; }
+    public int RequestsCount { get; set; }
     public required DateTime Expires { get; set; }
 }

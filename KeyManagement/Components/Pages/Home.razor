@@ -27,6 +27,7 @@ else
         <tr>
             <th>Ключ</th>
             <th>Логин</th>
+            <th>Обращений</th>
             <th>Истекает</th>
             <th></th>
         </tr>
@@ -37,6 +38,7 @@ else
             <tr>
                 <td>@key.Key</td>
                 <td>@key.Login</td>
+                <td>@key.RequestsCount</td>
                 <td>@key.Expires.ToString("dd.MM.yyyy HH:mm:ss")</td>
                 <td>
                     <button type="button" class="btn btn-primary" @onclick="@(async () => await RemoveKey(key))">
@@ -51,7 +53,7 @@ else
         </tbody>
     </table>
 }
-@if (IsEditModalVisible && EditingKey != null)
+@if (_isEditModalVisible && _editingKey != null)
 {
     <div class="modal show d-block" tabindex="-1">
         <div class="modal-dialog">
@@ -64,7 +66,7 @@ else
                     <div class="mb-3">
                         <label>Истекает</label>
                         <input type="datetime-local" class="form-control"
-                               @bind-value="EditingKey.Expires"
+                               @bind-value="_editingKey.Expires"
                                @bind-value:event="oninput" />
                     </div>
                 </div>
@@ -83,8 +85,8 @@ else
 
     private List<UserKey>? KeysCollection { get; set; }
     
-    private bool IsEditModalVisible = false;
-    private UserKey? EditingKey = null;
+    private bool _isEditModalVisible;
+    private UserKey? _editingKey;
 
     protected override async Task OnInitializedAsync()
     {
@@ -112,29 +114,29 @@ else
     
     private void OpenEditModal(UserKey key)
     {
-        EditingKey = new UserKey
+        _editingKey = new UserKey
         {
             Id = key.Id,
             Key = key.Key,
             Login = key.Login,
             Expires = key.Expires
         };
-        IsEditModalVisible = true;
+        _isEditModalVisible = true;
     }
     
     private void SaveChanges()
     {
-        if (EditingKey != null)
+        if (_editingKey != null)
         {
-            LiteContext.Keys.Update(EditingKey);
+            LiteContext.Keys.Update(_editingKey);
             KeysCollection = LiteContext.Keys.FindAll().ToList();
         }
-        IsEditModalVisible = false;
+        _isEditModalVisible = false;
     }
     
     private void CloseModal()
     {
-        IsEditModalVisible = false;
-        EditingKey = null;
+        _isEditModalVisible = false;
+        _editingKey = null;
     }
 }

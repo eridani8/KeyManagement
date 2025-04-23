@@ -58,6 +58,8 @@ try
         builder.Host.UseWindowsService();
     }
 
+    builder.Services.AddHostedService<ExpireService>();
+
     var app = builder.Build();
 
     if (!app.Environment.IsDevelopment())
@@ -74,7 +76,8 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapStaticAssets();
-    app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+    app.MapRazorComponents<App>()
+        .AddInteractiveServerRenderMode();
 
     app.Run();
 }
